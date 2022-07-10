@@ -117,18 +117,18 @@ namespace Rnwood.Smtp4dev
         {
             string installLocation = AppContext.BaseDirectory;
 
-            if (Directory.Exists(Path.Join(installLocation, "wwwroot")))
+            if (File.Exists(Path.Join(installLocation, "web.config")))
             {
                 return installLocation;
             }
 
             string cwd = Directory.GetCurrentDirectory();
-            if (Directory.Exists(Path.Join(cwd, "wwwroot")))
+            if (File.Exists(Path.Join(cwd, "web.config")))
             {
                 return cwd;
             }
 
-            throw new ApplicationException($"Unable to find wwwroot in either '{installLocation}' or the CWD '{cwd}'");
+            throw new ApplicationException($"Unable to find web.config in either '{installLocation}' or the CWD '{cwd}'");
         }
 
         private static IHost BuildWebHost(string[] args, CommandLineOptions cmdLineOptions, MapOptions<CommandLineOptions> commandLineOptions)

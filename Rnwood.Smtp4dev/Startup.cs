@@ -11,9 +11,7 @@ using Microsoft.Extensions.Logging;
 using Rnwood.Smtp4dev.DbModel;
 using Rnwood.Smtp4dev.Hubs;
 using Rnwood.Smtp4dev.Server;
-using VueCliMiddleware;
 using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.SpaServices;
 using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.Rewrite;
 using Rnwood.Smtp4dev.Data;
@@ -55,7 +53,7 @@ namespace Rnwood.Smtp4dev
                         File.Delete(serverOptions.Database);
                     }
 
-                    Log.Logger.Information("Using Sqlite database at {dbLocation}" ,Path.GetFullPath(serverOptions.Database));
+                    Log.Logger.Information("Using Sqlite database at {dbLocation}", Path.GetFullPath(serverOptions.Database));
                     opt.UseSqlite($"Data Source='{serverOptions.Database}'");
                 }
             }, ServiceLifetime.Scoped, ServiceLifetime.Singleton);
@@ -90,8 +88,6 @@ namespace Rnwood.Smtp4dev
 
             services.AddControllers();
 
-            services.AddSpaStaticFiles(o => o.RootPath = "ClientApp");
-
         }
 
 
@@ -104,31 +100,27 @@ namespace Rnwood.Smtp4dev
 
             Action<IApplicationBuilder> configure = subdir =>
             {
+                if (env.IsDevelopment())
+                {
+                    app.UseWebAssemblyDebugging();
+                }
+
                 subdir.UseRouting();
                 subdir.UseDeveloperExceptionPage();
                 subdir.UseDefaultFiles();
+                subdir.UseBlazorFrameworkFiles();
                 subdir.UseStaticFiles();
-                subdir.UseSpaStaticFiles();
 
                 subdir.UseWebSockets();
 
                 subdir.UseEndpoints(e =>
                 {
                     e.MapHub<NotificationsHub>("/hubs/notifications");
-
                     e.MapControllers();
-                    if (env.IsDevelopment())
-                    {
-                        e.MapToVueCliProxy(
-                        "{*path}",
-                        new SpaOptions { SourcePath = Path.Join(env.ContentRootPath, "ClientApp") },
-                        npmScript: "serve",
-                        regex: "Compiled successfully",
-                        forceKill: true,
-                        port: 8123
-                        );
-                    }
+                    e.MapFallbackToFile("index.html");
                 });
+
+    
 
                 using (IServiceScope scope = subdir.ApplicationServices.CreateScope())
                 {
