@@ -1,13 +1,23 @@
-using Rnwood.Smtp4dev.Client;
-using Microsoft.AspNetCore.Components.Web;
+using AntDesign.ProLayout;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using MudBlazor.Services;
+using Microsoft.Extensions.DependencyInjection;
 
-var builder = WebAssemblyHostBuilder.CreateDefault(args);
-builder.RootComponents.Add<App>("#app");
-builder.RootComponents.Add<HeadOutlet>("head::after");
+namespace Rnwood.Smtp4dev.Client;
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-builder.Services.AddMudServices();
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        var builder = WebAssemblyHostBuilder.CreateDefault(args);
+        builder.RootComponents.Add<App>("#app");
 
-await builder.Build().RunAsync();
+        builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+        builder.Services.AddAntDesign();
+        builder.Services.Configure<ProSettings>(builder.Configuration.GetSection("ProSettings"));
+
+        await builder.Build().RunAsync();
+    }
+}
