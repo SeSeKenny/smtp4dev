@@ -138,6 +138,7 @@ namespace Rnwood.Smtp4dev
 
 
             var contentRoot = GetContentRoot();
+            _log.Information("Web Content Root: {contentRoot}", contentRoot);
             var dataDir = GetOrCreateDataDir(cmdLineOptions);
             _log.Information("DataDir: {dataDir}", dataDir);
             Directory.SetCurrentDirectory(dataDir);
