@@ -81,7 +81,9 @@ namespace Rnwood.Smtp4dev
 
             if (!Debugger.IsAttached && args.Contains("--service"))
                 IsService = true;
-
+            if (args.Any(a => a.StartsWith("--applicationName", StringComparison.Ordinal))) {
+                args = new string[0];
+            }
             MapOptions<CommandLineOptions> commandLineOptions = CommandLineParser.TryParseCommandLine(args, isDesktopApp);
 
             CommandLineOptions cmdLineOptions = new CommandLineOptions();
@@ -101,7 +103,7 @@ namespace Rnwood.Smtp4dev
 
 
             var addressesFeature = host.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
-            var urls = addressesFeature.Addresses;
+            var urls = addressesFeature?.Addresses ?? new string[0];
 
             foreach (var url in urls)
             {

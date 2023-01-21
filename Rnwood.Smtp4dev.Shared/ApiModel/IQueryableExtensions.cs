@@ -5,10 +5,10 @@ namespace Rnwood.Smtp4dev.ApiModel
 {
     public static class QueryableExtensions
     {
-        public static PagedResult<T> GetPaged<T>(this IQueryable<T> query,
-            int page, int pageSize) where T : class
+        public static TResult GetPaged<T, TResult>(this IQueryable<T> query,
+            int page, int pageSize) where T : class where TResult : PagedResult<T>, new()
         {
-            var result = new PagedResult<T>
+            var result = new TResult
             {
                 CurrentPage = page,
                 PageSize = pageSize,

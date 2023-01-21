@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Rnwood.Smtp4dev.Data;
 using System.Net.NetworkInformation;
 using Serilog;
+using Rnwood.Smtp4dev.ApiModel;
 
 namespace Rnwood.Smtp4dev.Server
 {
@@ -216,7 +217,7 @@ namespace Rnwood.Smtp4dev.Server
 
                         if (dbMessage != null)
                         {
-                            ApiModel.Message apiMessage = new ApiModel.Message(dbMessage);
+                            ServerMessage apiMessage = new ServerMessage(dbMessage);
                             Mail_Message message = Mail_Message.ParseFromByte(apiMessage.Data);
                             e.AddData(msgInfo, message);
                         }

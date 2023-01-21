@@ -17,6 +17,9 @@
 	<PropertyGroup Condition="'$(Configuration)'==''">
 		<Configuration>Debug</Configuration>
 	</PropertyGroup>
+    <PropertyGroup>
+    <BlazorEnableCompression>true</BlazorEnableCompression>
+  </PropertyGroup>  
 
 	<ItemGroup>
 		<PackageReference Include="Ardalis.GuardClauses" Version="4.0.1" />
@@ -36,6 +39,11 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.1" />
 		<PackageReference Include="MimeKit" Version="3.3.0" />
 		<PackageReference Include="Mono.Options" Version="6.12.0.148" />
+		<PackageReference Include="NSwag.AspNetCore" Version="13.17.0" />
+		<PackageReference Include="NSwag.MsBuild" Version="13.17.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Rnwood.LumiSoft.Net" Version="1.0.0" />
 		<PackageReference Include="Rnwood.SmtpServer" Version="3.1.0-ci0648" />
 		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
@@ -64,6 +72,24 @@
 
 	<PropertyGroup> 
 		<UserSecretsId>166ca2db-ad20-40b7-95ab-1634e9dd4404</UserSecretsId> 
+		<GenerateDocumentationFile>False</GenerateDocumentationFile> 
 	</PropertyGroup>
+
+  <PropertyGroup>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <NSwagInputs Include="nswag.nswag" />
+    <NSwagInputs Include="Controllers\**\*" />
+  </ItemGroup>
+
+  <Target Name="NSwag" AfterTargets="Build" Inputs="@(NSwagInputs)" Outputs="swagger.json">
+    <Exec Command="$(NSwagExe_Net60) run nswag.nswag /variables:Configuration=$(Configuration)" />
+  </Target>
+
+  
+
+
 
 </Project>

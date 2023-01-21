@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Rnwood.Smtp4dev.Data;
 using Rnwood.Smtp4dev.Service;
 using Serilog;
+using System.Reflection;
 
 namespace Rnwood.Smtp4dev
 {
@@ -64,6 +65,7 @@ namespace Rnwood.Smtp4dev
             services.AddScoped<IHostingEnvironmentHelper, HostingEnvironmentHelper>();
             services.AddSingleton<ITaskQueue, TaskQueue>();
 
+
             services.AddSingleton<Func<RelayOptions, SmtpClient>>((relayOptions) =>
             {
                 if (!relayOptions.IsEnabled)
@@ -87,6 +89,10 @@ namespace Rnwood.Smtp4dev
             services.AddSingleton<NotificationsHub>();
 
             services.AddControllers();
+            services.AddOpenApiDocument(c =>
+            {
+                c.Title = "smtp4dev";
+            });
 
         }
 
@@ -98,12 +104,16 @@ namespace Rnwood.Smtp4dev
 
             app.UseRouting();
 
+
             Action<IApplicationBuilder> configure = subdir =>
             {
                 if (env.IsDevelopment())
                 {
                     app.UseWebAssemblyDebugging();
                 }
+
+                subdir.UseOpenApi();
+                subdir.UseSwaggerUi3();
 
                 subdir.UseRouting();
                 subdir.UseDeveloperExceptionPage();
@@ -118,9 +128,10 @@ namespace Rnwood.Smtp4dev
                     e.MapHub<NotificationsHub>("/hubs/notifications");
                     e.MapControllers();
                     e.MapFallbackToFile("index.html");
+
                 });
 
-    
+
 
                 using (IServiceScope scope = subdir.ApplicationServices.CreateScope())
                 {

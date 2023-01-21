@@ -1,15 +1,16 @@
-﻿using MimeKit;
-using System;
+﻿using AntDesign;
+using Microsoft.AspNetCore.Mvc;
+using MimeKit;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.AspNetCore.Mvc;
+using System.Reactive.Subjects;
 
 namespace Rnwood.Smtp4dev.ApiModel
 {
-    public class Message : ICacheByKey
+    public class ServerMessage : Message
     {
-        public Message(DbModel.Message dbMessage)
+        public ServerMessage(DbModel.Message dbMessage)
         {
             Data = dbMessage.Data;
             Id = dbMessage.Id;
@@ -49,7 +50,7 @@ namespace Rnwood.Smtp4dev.ApiModel
 
                     foreach (var internetAddress in MimeMessage.To.Where(t => t is MailboxAddress))
                     {
-                        var to = (MailboxAddress) internetAddress;
+                        var to = (MailboxAddress)internetAddress;
                         recipients.Remove(PunyCodeReplacer.DecodePunycode(to.Address));
                     }
                 }
@@ -60,7 +61,7 @@ namespace Rnwood.Smtp4dev.ApiModel
 
                     foreach (var internetAddress in MimeMessage.Cc.Where(t => t is MailboxAddress))
                     {
-                        var cc = (MailboxAddress) internetAddress;
+                        var cc = (MailboxAddress)internetAddress;
                         recipients.Remove(PunyCodeReplacer.DecodePunycode(cc.Address));
                     }
                 }
@@ -73,64 +74,70 @@ namespace Rnwood.Smtp4dev.ApiModel
         }
 
 
+        internal MimeMessage MimeMessage { get; set; }
+
+        internal byte[] Data { get; set; }
+
+
+
         private MessageEntitySummary HandleMimeEntity(MimeEntity entity)
         {
             var index = 0;
 
             return MimeEntityVisitor.VisitWithResults<MessageEntitySummary>(entity, (e, p) =>
-           {
-               var fileName = PunyCodeReplacer.DecodePunycode(!string.IsNullOrEmpty(e.ContentDisposition?.FileName)
-            ? e.ContentDisposition?.FileName
-            : e.ContentType?.Name);
+            {
+                var fileName = PunyCodeReplacer.DecodePunycode(!string.IsNullOrEmpty(e.ContentDisposition?.FileName)
+             ? e.ContentDisposition?.FileName
+             : e.ContentType?.Name);
 
-               var result = new MessageEntitySummary
-               {
-                   MessageId = Id,
-                   Id = index.ToString(),
-                   ContentId = e.ContentId,
-                   Name = (fileName ?? e.ContentId ?? index.ToString()) + " - " + e.ContentType.MimeType,
-                   Headers = e.Headers.Select(h => new Header { Name = h.Field, Value = PunyCodeReplacer.DecodePunycode(h.Value) }).ToList(),
-                   ChildParts = new List<MessageEntitySummary>(),
-                   Attachments = new List<AttachmentSummary>(),
-                   Warnings = new List<MessageWarning>(),
-                   Size = e.ToString().Length,
-                   IsAttachment = (e.ContentDisposition?.Disposition != "inline" && !string.IsNullOrEmpty(fileName)) || e.ContentDisposition?.Disposition == "attachment",
-                   MimeEntity = e
-               };
+                var result = new ServerMessageEntitySummary
+                {
+                    MessageId = Id,
+                    Id = index.ToString(),
+                    ContentId = e.ContentId,
+                    Name = (fileName ?? e.ContentId ?? index.ToString()) + " - " + e.ContentType.MimeType,
+                    Headers = e.Headers.Select(h => new Header { Name = h.Field, Value = PunyCodeReplacer.DecodePunycode(h.Value) }).ToList(),
+                    ChildParts = new List<MessageEntitySummary>(),
+                    Attachments = new List<AttachmentSummary>(),
+                    Warnings = new List<MessageWarning>(),
+                    Size = e.ToString().Length,
+                    IsAttachment = (e.ContentDisposition?.Disposition != "inline" && !string.IsNullOrEmpty(fileName)) || e.ContentDisposition?.Disposition == "attachment",
+                    MimeEntity = e
+                };
 
-               if (p != null)
-               {
-                   p.ChildParts.Add(result);
+                if (p != null)
+                {
+                    p.ChildParts.Add(result);
 
-                   if (result.IsAttachment)
-                   {
-                       if (e.ContentDisposition?.Disposition != "attachment")
-                       {
-                           result.Warnings.Add(new MessageWarning { Details = $"Attachment '{fileName}' should have \"Content-Disposition: attachment\" header." });
-                       }
+                    if (result.IsAttachment)
+                    {
+                        if (e.ContentDisposition?.Disposition != "attachment")
+                        {
+                            result.Warnings.Add(new MessageWarning { Details = $"Attachment '{fileName}' should have \"Content-Disposition: attachment\" header." });
+                        }
 
-                       if (string.IsNullOrEmpty(fileName))
-                       {
-                           result.Warnings.Add(new MessageWarning { Details = $"Attachment with content ID '{e.ContentId}' should have filename specified in either 'Content-Type' or 'Content-Disposition' header." });
-                       }
+                        if (string.IsNullOrEmpty(fileName))
+                        {
+                            result.Warnings.Add(new MessageWarning { Details = $"Attachment with content ID '{e.ContentId}' should have filename specified in either 'Content-Type' or 'Content-Disposition' header." });
+                        }
 
-                       p.Attachments.Add(new AttachmentSummary()
-                       {
-                           Id = result.Id,
-                           ContentId = result.ContentId,
-                           FileName = fileName,
-                           Url = $"api/messages/{Id}/part/{result.Id}/content"
-                       });
-                   }
-               }
+                        p.Attachments.Add(new AttachmentSummary()
+                        {
+                            Id = result.Id,
+                            ContentId = result.ContentId,
+                            FileName = fileName,
+                            Url = $"api/messages/{Id}/part/{result.Id}/content"
+                        });
+                    }
+                }
 
-               index++;
-               return result;
-           });
+                index++;
+                return result;
+            });
 
         }
 
-        internal static FileStreamResult GetPartContent(Message result, string cid)
+        internal static FileStreamResult GetPartContent(ServerMessage result, string cid)
         {
             var contentEntity = GetPart(result, cid);
 
@@ -151,7 +158,7 @@ namespace Rnwood.Smtp4dev.ApiModel
             }
         }
 
-        internal static string GetPartContentAsText(Message result, string id)
+        internal static string GetPartContentAsText(ServerMessage result, string id)
         {
             var contentEntity = GetPart(result, id);
 
@@ -167,16 +174,16 @@ namespace Rnwood.Smtp4dev.ApiModel
 
 
 
-        internal static string GetPartSource(Message message, string id)
+        internal static string GetPartSource(ServerMessage message, string id)
         {
             var contentEntity = GetPart(message, id);
             return contentEntity.ToString();
         }
 
 
-        private static MimeEntity GetPart(Message message, string id)
+        private static MimeEntity GetPart(ServerMessage message, string id)
         {
-            var part = message.Parts.Flatten(p => p.ChildParts).SingleOrDefault(p => p.Id == id);
+            var part = (ServerMessageEntitySummary) message.Parts.Flatten(p => p.ChildParts).SingleOrDefault(p => p.Id == id);
 
             if (part == null)
             {
@@ -185,31 +192,5 @@ namespace Rnwood.Smtp4dev.ApiModel
 
             return part.MimeEntity;
         }
-
-        public Guid Id { get; set; }
-
-        public string From { get; set; }
-        public string To { get; set; }
-        public string Cc { get; set; }
-        public string Bcc { get; set; }
-        public DateTime ReceivedDate { get; set; }
-        
-        public bool SecureConnection { get; set; }
-
-        public string Subject { get; set; }
-
-        public List<MessageEntitySummary> Parts { get; set; } 
-
-        public List<Header> Headers { get; set; }
-
-        public string MimeParseError { get; set; }
-
-        public string RelayError { get; set; }
-
-        internal MimeMessage MimeMessage { get; set; }
-
-        internal byte[] Data { get; set; }
-
-        string ICacheByKey.CacheKey => Id.ToString();
     }
 }

@@ -15,6 +15,9 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection;
 using Rnwood.Smtp4dev.Data;
 using Serilog;
+using Rnwood.Smtp4dev.ApiModel;
+using Session = Rnwood.Smtp4dev.DbModel.Session;
+using Message = Rnwood.Smtp4dev.DbModel.Message;
 
 namespace Rnwood.Smtp4dev.Server
 {
@@ -338,7 +341,7 @@ namespace Rnwood.Smtp4dev.Server
                     log.Information("Relaying message to {recipient}", recipient);
 
                     using SmtpClient relaySmtpClient = relaySmtpClientFactory(relayOptions.CurrentValue);
-                            var apiMsg = new ApiModel.Message(message);
+                            var apiMsg = new ServerMessage(message);
                             MimeMessage newEmail = apiMsg.MimeMessage;
                             MailboxAddress sender = MailboxAddress.Parse(
                                 !string.IsNullOrEmpty(relayOptions.CurrentValue.SenderAddress)

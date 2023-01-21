@@ -24,4 +24,12 @@ namespace Rnwood.Smtp4dev.ApiModel
             Results = new List<T>();
         }
     }
+
+    public class PagedResultOfMessageSummary : PagedResult<MessageSummary>
+    {
+    }
+
+    public class PagedResultOfSessionSummary : PagedResult<SessionSummary>
+    {
+    }
 }

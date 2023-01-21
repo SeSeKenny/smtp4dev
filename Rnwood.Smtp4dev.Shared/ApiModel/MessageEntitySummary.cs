@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MimeKit;
 using System.Collections;
 using System.Text.Json.Serialization;
 
@@ -24,7 +23,5 @@ namespace Rnwood.Smtp4dev.ApiModel
 
         public bool IsAttachment{ get; set;}
 
-        [JsonIgnore]
-        internal MimeEntity MimeEntity { get; set; }
     }
 }

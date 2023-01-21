@@ -4,17 +4,6 @@ namespace Rnwood.Smtp4dev.ApiModel
 {
     public class MessageSummary : ICacheByKey
     {
-        public MessageSummary(DbModel.Message dbMessage)
-        {
-            Id = dbMessage.Id;
-            From = dbMessage.From;
-            To = dbMessage.To;
-            ReceivedDate = dbMessage.ReceivedDate;
-            Subject = dbMessage.Subject;
-            AttachmentCount = dbMessage.AttachmentCount;
-            IsUnread = dbMessage.IsUnread;
-            IsRelayed = dbMessage.Relays.Count > 0;
-        }
 
         public bool IsRelayed { get; set; }
 
