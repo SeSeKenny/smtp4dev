@@ -22,7 +22,7 @@ public class Program
         builder.Services.AddScoped(sp =>
         {
             var result = new HubConnectionManager(builder.HostEnvironment.BaseAddress + "hubs/notifications");
-            result.StartAsync();
+            var notAwaited = result.StartAsync();
             return result;
         });
 
