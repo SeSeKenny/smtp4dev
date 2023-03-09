@@ -199,8 +199,8 @@ stages:
 
     - task: GitHubRelease@1
       inputs:
-        gitHubConnection: github.com_rnwood
-        repositoryName: rnwood/smtp4dev
+        gitHubConnection: github.com_SeSeKenny
+        repositoryName: SeSeKenny/smtp4dev
         action: create
         title: $(tag)
         tag: $(tag)
@@ -215,73 +215,4 @@ stages:
           changeLogCompareToRelease: lastNonDraftRelease
 
         assets: $(Build.ArtifactStagingDirectory)/**/*.zip
-
-  - job: DockerReleaseTagLinux
-    displayName: Docker Release Tag - Linux
-    variables:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    pool:
-      vmImage: 'ubuntu-18.04'
-    steps:
-    - checkout: none
-    - task: Docker@2
-      displayName: Login.
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: login
-    - task: PowerShell@2
-      displayName: Tag release
-      inputs:
-        targetType: inline
-        script: |
-          docker pull $(docker_repo):linux-amd64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):linux-amd64-$(tag) $(docker_repo):linux-amd64-$_
-            docker push $(docker_repo):linux-amd64-$_
-          }
-
-          docker pull $(docker_repo):linux-arm64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):linux-arm64-$(tag) $(docker_repo):linux-arm64-$_
-            docker push $(docker_repo):linux-arm64-$_
-          }
-
-  - job: DockerRelease
-    displayName: Docker Release
-    dependsOn: DockerReleaseTagLinux
-    variables:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    pool:
-      vmImage: 'windows-2019'
-    steps:
-    - checkout: none
-    - task: Docker@2
-      displayName: Login
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: login
-    - task: PowerShell@2
-      displayName: Tag release
-      inputs:
-        targetType: inline
-        script: |
-          docker pull $(docker_repo):windows-amd64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):windows-amd64-$(tag) $(docker_repo):windows-amd64-$_
-            docker push $(docker_repo):windows-amd64-$_
-          }
-
-          docker manifest create $(docker_repo):$(tag) $(docker_repo):windows-amd64-$(tag) $(docker_repo):linux-amd64-$(tag) $(docker_repo):linux-arm64-$(tag)
-          docker manifest push $(docker_repo):$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker manifest create $(docker_repo):$_ $(docker_repo):windows-amd64-$_ $(docker_repo):linux-amd64-$_ $(docker_repo):linux-arm64-$_
-            docker manifest push $(docker_repo):$_
-          }
-
 
