@@ -4,6 +4,7 @@ using Rnwood.Smtp4dev.Hubs;
 using Rnwood.SmtpServer;
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -318,10 +319,12 @@ namespace Rnwood.Smtp4dev.Server
 
             if (overrideRecipients == null)
             {
+                Regex rx = new Regex(string.Join("|",relayOptions.CurrentValue.AutomaticEmails),
+                RegexOptions.IgnoreCase);
                 recipients = message.To
                     .Split(",")
                     .Select(r => MailboxAddress.Parse(r))
-                    .Where(r => relayOptions.CurrentValue.AutomaticEmails.Contains(r.Address, StringComparer.OrdinalIgnoreCase))
+                    .Where(r => rx.IsMatch(r.Address))
                     .ToArray();
             }
             else
