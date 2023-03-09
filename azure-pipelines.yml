@@ -24,8 +24,6 @@ variables:
     civersion: '3.1.3'
     tag: $[ format('$(civersion)-ci{0:yyyyMMdd}{1}', pipeline.startTime, counter(format('{0:yyyyMMdd}', pipeline.startTime), 100)) ]
 
-  docker_repo: 'rnwood/smtp4dev'
-  docker_registry: 'dockerhub-rnwood'
   netcoresdk_version: '3.1.413'
 
 stages:
@@ -137,91 +135,6 @@ stages:
       displayName: Rename artifact
     - publish: $(Build.ArtifactStagingDirectory)/linux-arm
       artifact: linux-arm
-  - job: DockerBuildLinux
-    displayName: DockerBuild - Linux
-    pool:
-      vmImage: 'ubuntu-18.04'
-    steps:
-    - task: Docker@2
-      displayName: Build image
-      inputs:
-        command: build
-        dockerfile: '**/Dockerfile.linux'
-        arguments: '--build-arg version=$(tag) -t $(docker_repo):linux-amd64-$(tag)'
-    - task: Docker@2
-      displayName: Push image
-      condition: or(variables['isreleasebuild'], variables['iscibuild'])
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: push
-        tags: |
-          linux-amd64-$(tag)
-  - job: DockerBuildLinuxArm64
-    displayName: DockerBuild - Linux - ARM64
-    pool:
-      vmImage: 'ubuntu-18.04'
-    steps:
-      - task: Docker@2
-        displayName: Build image
-        inputs:
-          command: build
-          dockerfile: '**/Dockerfile.linux.arm64'
-          arguments: '--build-arg version=$(tag) -t $(docker_repo):linux-arm64-$(tag)'
-      - task: Docker@2
-        displayName: Push image
-        condition: or(variables['isreleasebuild'], variables['iscibuild'])
-        inputs:
-          containerRegistry: $(docker_registry)
-          repository: $(docker_repo)
-          command: push
-          tags: |
-            linux-arm64-$(tag)
-  - job: DockerBuildWindows
-    displayName: DockerBuild - Windows
-    pool:
-      vmImage: 'windows-2019'
-    steps:
-    - task: Docker@2
-      displayName: Build image
-      inputs:
-        command: build
-        dockerfile: '**/Dockerfile.windows'
-        arguments: '--build-arg version=$(tag) -t $(docker_repo):windows-amd64-$(tag)'
-    - task: Docker@2
-      displayName: Push image
-      condition: or(variables['isreleasebuild'], variables['iscibuild'])
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: push
-        tags: |
-          windows-amd64-$(tag)
-  - job: DockerManifest
-    displayName: Docker Create Manifest
-    condition: or(variables['isreleasebuild'], variables['iscibuild'])
-    dependsOn:
-    - DockerBuildLinux
-    - DockerBuildLinuxArm64
-    - DockerBuildWindows
-    variables:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    pool:
-      vmImage: 'windows-2019'
-    steps:
-    - task: Docker@2
-      displayName: Login.
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: login
-    - task: PowerShell@2
-      displayName: Create cross platform manifest
-      inputs:
-        targetType: inline
-        script: |
-          docker manifest create $(docker_repo):$(tag) $(docker_repo):windows-amd64-$(tag) $(docker_repo):linux-amd64-$(tag) $(docker_repo):linux-arm64-$(tag)
-          docker manifest push $(docker_repo):$(tag)
 
 - stage: Test
   displayName: Test
@@ -282,18 +195,12 @@ stages:
     - task: DownloadPipelineArtifact@2
       inputs:
         path: $(Build.ArtifactStagingDirectory)
-    - task: NuGetCommand@2
-      inputs:
-        command: 'push'
-        packagesToPush: '$(Build.ArtifactStagingDirectory)/dotnetglobaltool/*.nupkg'
-        nuGetFeedType: 'external'
-        publishFeedCredentials: 'nuget_rnwood'
 
 
     - task: GitHubRelease@1
       inputs:
-        gitHubConnection: github.com_rnwood
-        repositoryName: rnwood/smtp4dev
+        gitHubConnection: github.com_SeSeKenny
+        repositoryName: SeSeKenny/smtp4dev
         action: create
         title: $(tag)
         tag: $(tag)
@@ -308,73 +215,4 @@ stages:
           changeLogCompareToRelease: lastNonDraftRelease
 
         assets: $(Build.ArtifactStagingDirectory)/**/*.zip
-
-  - job: DockerReleaseTagLinux
-    displayName: Docker Release Tag - Linux
-    variables:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    pool:
-      vmImage: 'ubuntu-18.04'
-    steps:
-    - checkout: none
-    - task: Docker@2
-      displayName: Login.
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: login
-    - task: PowerShell@2
-      displayName: Tag release
-      inputs:
-        targetType: inline
-        script: |
-          docker pull $(docker_repo):linux-amd64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):linux-amd64-$(tag) $(docker_repo):linux-amd64-$_
-            docker push $(docker_repo):linux-amd64-$_
-          }
-
-          docker pull $(docker_repo):linux-arm64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):linux-arm64-$(tag) $(docker_repo):linux-arm64-$_
-            docker push $(docker_repo):linux-arm64-$_
-          }
-
-  - job: DockerRelease
-    displayName: Docker Release
-    dependsOn: DockerReleaseTagLinux
-    variables:
-      DOCKER_CLI_EXPERIMENTAL: enabled
-    pool:
-      vmImage: 'windows-2019'
-    steps:
-    - checkout: none
-    - task: Docker@2
-      displayName: Login
-      inputs:
-        containerRegistry: $(docker_registry)
-        repository: $(docker_repo)
-        command: login
-    - task: PowerShell@2
-      displayName: Tag release
-      inputs:
-        targetType: inline
-        script: |
-          docker pull $(docker_repo):windows-amd64-$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker tag $(docker_repo):windows-amd64-$(tag) $(docker_repo):windows-amd64-$_
-            docker push $(docker_repo):windows-amd64-$_
-          }
-
-          docker manifest create $(docker_repo):$(tag) $(docker_repo):windows-amd64-$(tag) $(docker_repo):linux-amd64-$(tag) $(docker_repo):linux-arm64-$(tag)
-          docker manifest push $(docker_repo):$(tag)
-
-          ("$(docker_tags)".Split(" ", [StringSplitOptions]::RemoveEmptyEntries)) | foreach-object {
-            docker manifest create $(docker_repo):$_ $(docker_repo):windows-amd64-$_ $(docker_repo):linux-amd64-$_ $(docker_repo):linux-arm64-$_
-            docker manifest push $(docker_repo):$_
-          }
-
 
